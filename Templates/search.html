@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!-- HTML5 документ -->
+<html lang="ru">
+
+<head>
+    <!-- Кодировка -->
+    <meta charset="UTF-8">
+    <!-- Адаптивность -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Заголовок страницы -->
+    <title>Поиск - Социальная сеть</title>
+    <!-- Подключение стилей -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <!-- Контейнер -->
+    <div class="container">
+        <!-- Шапка -->
+        <header>
+            <!-- Название с ссылкой на главную -->
+            <h1><a href="/">Социальная сеть</a></h1>
+            <!-- Меню навигации -->
+            <nav>
+                <a href="/">Главная</a>
+                <a href="/search">Поиск</a>
+                <a href="/random_quote">Случайная цитата</a>
+            </nav>
+            <!-- Форма поиска -->
+            <!-- value="{{ query }}" - подставляется предыдущий поисковый запрос -->
+            <form action="/search" method="get" class="search-form">
+                <input type="text" name="s" value="{{ query }}" placeholder="Поиск постов...">
+                <button type="submit">Найти</button>
+            </form>
+        </header>
+
+        <!-- Основной контент -->
+        <main>
+            <!-- Заголовок секции -->
+            <h2>Результаты поиска</h2>
+
+            <!-- Если есть поисковый запрос -->
+            {% if query %}
+            <!-- Показываем количество найденных постов -->
+            <!-- posts|length - количество элементов в списке -->
+            <p>По запросу "{{ query }}" найдено {{ posts|length }} постов:</p>
+            {% else %}
+            <!-- Если запрос пустой -->
+            <p>Введите поисковый запрос</p>
+            {% endif %}
+
+            <!-- Если есть результаты поиска -->
+            {% if posts %}
+            <!-- Цикл по найденным постам -->
+            {% for post in posts %}
+            <article class="post">
+                <!-- Заголовок поста со ссылкой -->
+                <h3><a href="/posts/{{ post.id }}">{{ post.title }}</a></h3>
+                <!-- Мета-данные -->
+                <div class="post-meta">
+                    <span class="author">Автор: <a href="/users/{{ post.author }}">{{ post.author }}</a></span>
+                    <span class="views">👁 {{ post.views }}</span>
+                    <span class="likes">❤ {{ post.likes }}</span>
+                </div>
+                <!-- Краткое содержимое (первые 100 символов) -->
+                <div class="post-content">
+                    {{ post.content[:100] }}{% if post.content|length > 100 %}...{% endif %}
+                </div>
+                <!-- Кнопки действий -->
+                <div class="post-actions">
+                    <a href="/posts/{{ post.id }}" class="btn">Подробнее</a>
+                    <a href="/users/{{ post.author }}" class="btn">Все посты автора</a>
+                </div>
+            </article>
+            {% endfor %}
+            <!-- Если был запрос, но ничего не найдено -->
+            {% elif query %}
+            <p>По вашему запросу ничего не найдено.</p>
+            {% endif %}
+        </main>
+
+        <!-- Подвал -->
+        <footer>
+            <p><a href="/">← Назад к списку постов</a></p>
+        </footer>
+    </div>
+</body>
+
+</html>

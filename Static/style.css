@@ -1,0 +1,501 @@
+/* ============================================
+   Основные стили для социальной сети
+   ============================================ */
+
+/* Сброс отступов для всех элементов
+   * - универсальный селектор (все элементы)
+   margin: 0 - внешний отступ (снаружи элемента)
+   padding: 0 - внутренний отступ (внутри элемента)
+   box-sizing: border-box - включаем padding и border в общую ширину/высоту */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Стили для всего тела страницы (body)
+   font-family - шрифт текста (системные шрифты для каждой ОС)
+   line-height: 1.6 - межстрочный интервал (1.6 = 160% от размера шрифта)
+   color - цвет текста (#333 - темно-серый)
+   background-color - цвет фона страницы (#f5f5f5 - светло-серый) */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+/* Контейнер для центрирования контента
+   max-width: 1200px - максимальная ширина
+   margin: 0 auto - центрирование (0 сверху/снизу, auto слева/справа)
+   padding: 20px - внутренние отступы */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ============================================
+   Шапка сайта (header)
+   ============================================ */
+
+/* Стили для шапки
+   background-color: #fff - белый фон
+   padding: 20px - внутренние отступы
+   border-radius: 8px - скругление углов
+   box-shadow - тень блока */
+header {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+/* Заголовок h1 внутри header
+   color - цвет текста (#2c3e50 - темно-синий)
+   margin-bottom - отступ снизу */
+header h1 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+/* Ссылки внутри h1 в header
+   убираем подчеркивание (text-decoration: none) */
+header h1 a {
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+/* Навигационное меню
+   margin-bottom - отступ снизу */
+nav {
+    margin-bottom: 20px;
+}
+
+/* Ссылки в навигации
+   color - цвет ссылки (#3498db - синий)
+   text-decoration: none - убрать подчеркивание
+   margin-right: 20px - отступ справа между ссылками
+   font-weight: 500 - полужирное начертание */
+nav a {
+    color: #3498db;
+    text-decoration: none;
+    margin-right: 20px;
+    font-weight: 500;
+}
+
+/* Ссылки при наведении (hover)
+   color - новый цвет при наведении
+   text-decoration: underline - подчеркивание */
+nav a:hover {
+    color: #2980b9;
+    text-decoration: underline;
+}
+
+/* Форма поиска
+   display: flex - flexbox-раскладка (гибкие контейнеры)
+   gap: 10px - промежуток между элементами
+   margin-top - отступ сверху */
+.search-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* Поле ввода в форме поиска
+   flex: 1 - занимает все доступное пространство
+   padding - внутренние отступы
+   border - граница (1px solid #ddd - светло-серая)
+   border-radius - скругление углов
+   font-size - размер шрифта */
+.search-form input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+/* Кнопка в форме поиска
+   padding - внутренние отступы (10px 20px - сверху/снизу, слева/справа)
+   background-color - цвет фона кнопки
+   color - цвет текста кнопки
+   border: none - без границы
+   cursor: pointer - курсор "палец" при наведении */
+.search-form button {
+    padding: 10px 20px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* Кнопка при наведении
+   background-color - более темный синий */
+.search-form button:hover {
+    background-color: #2980b9;
+}
+
+/* ============================================
+   Основной контент (main)
+   ============================================ */
+
+/* Секция main
+   background-color: white - белый фон
+   padding - внутренние отступы
+   border-radius - скругление углов
+   box-shadow - тень */
+main {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Заголовки h2
+   color - цвет заголовка
+   margin-bottom - отступ снизу
+   padding-bottom - внутренний отступ снизу
+   border-bottom - граница снизу (2px solid #eee) */
+h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+}
+
+/* ============================================
+   Посты (article.post)
+   ============================================ */
+
+/* Блок поста
+   border - граница
+   padding - внутренние отступы
+   margin-bottom - отступ снизу
+   border-radius - скругление углов
+   transition - плавный переход (для анимации) */
+.post {
+    border: 1px solid #eee;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Пост при наведении
+   transform: translateY(-2px) - подъем вверх на 2px
+   box-shadow - усиление тени */
+.post:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Заголовок h3 внутри поста
+   margin-bottom - отступ снизу */
+.post h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+/* Ссылки внутри h3 поста */
+.post h3 a {
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+/* Ссылки h3 при наведении */
+.post h3 a:hover {
+    color: #3498db;
+}
+
+/* Мета-информация поста (автор, просмотры, лайки)
+   display: flex - горизонтальное расположение
+   gap: 20px - промежуток между элементами
+   margin-bottom - отступ снизу
+   color - цвет текста (#666 - серый)
+   font-size - размер шрифта */
+.post-meta {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Ссылки внутри мета-информации (автор) */
+.post-meta .author a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+/* Ссылки авторов при наведении */
+.post-meta .author a:hover {
+    text-decoration: underline;
+}
+
+/* Содержимое поста
+   margin-bottom - отступ снизу
+   line-height - межстрочный интервал */
+.post-content {
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+/* Кнопки действий поста
+   display: flex - горизонтальное расположение
+   gap: 10px - промежуток
+   margin-top - отступ сверху */
+.post-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* ============================================
+   Кнопки (.btn)
+   ============================================ */
+
+/* Универсальная кнопка
+   display: inline-block - блочно-строчный элемент
+   padding - внутренние отступы
+   background-color - фон кнопки (синий)
+   color - цвет текста (белый)
+   text-decoration: none - убрать подчеркивание
+   border-radius - скругление
+   border: none - без границы
+   cursor: pointer - курсор "палец"
+   transition - плавный переход цвета */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #3498db;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+/* Кнопка при наведении
+   background-color - более темный синий
+   color: white - сохраняем белый текст
+   text-decoration: none - убираем подчеркивание ссылки */
+.btn:hover {
+    background-color: #2980b9;
+    color: white;
+    text-decoration: none;
+}
+
+/* ============================================
+   Полный пост (.post-full)
+   ============================================ */
+
+/* Контейнер полного поста
+   margin-bottom - отступ снизу */
+.post-full {
+    margin-bottom: 40px;
+}
+
+/* Содержимое полного поста
+   font-size - увеличенный размер шрифта
+   line-height - увеличенный межстрочный интервал
+   margin-top - отступ сверху */
+.post-full .post-content {
+    font-size: 18px;
+    line-height: 1.8;
+    margin-top: 20px;
+}
+
+/* ============================================
+   Комментарии (.comments)
+   ============================================ */
+
+/* Секция комментариев
+   margin-top - отступ сверху */
+.comments {
+    margin-top: 40px;
+}
+
+/* Блок одного комментария
+   border - граница
+   padding - внутренние отступы
+   margin-bottom - отступ снизу
+   background-color - светло-серый фон (#f9f9f9) */
+.comment {
+    border: 1px solid #eee;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+/* Мета-информация комментария (автор)
+   margin-bottom - отступ снизу
+   color - серый цвет */
+.comment-meta {
+    margin-bottom: 10px;
+    color: #666;
+}
+
+/* Содержимое комментария
+   line-height - межстрочный интервал */
+.comment-content {
+    line-height: 1.6;
+}
+
+/* Форма добавления комментария
+   margin-top - отступ сверху
+   padding - внутренние отступы
+   background-color - фон
+   border-radius - скругление */
+.comment-form {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+}
+
+/* Заголовок h4 в форме комментария
+   margin-bottom - отступ снизу */
+.comment-form h4 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+/* Поля ввода в форме комментария
+   width: 100% - полная ширина
+   padding - внутренние отступы
+   margin-bottom - отступ снизу
+   border - граница
+   border-radius - скругление
+   font-size - размер шрифта */
+.comment-form input,
+.comment-form textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+/* Текстовая область (textarea)
+   resize: vertical - можно изменять только по вертикали */
+.comment-form textarea {
+    resize: vertical;
+}
+
+/* ============================================
+   Секция цитаты (.quote)
+   ============================================ */
+
+/* Блок с цитатой
+   text-align: center - выравнивание по центру
+   padding - внутренние отступы
+   background-color - фон
+   border-radius - скругление */
+.quote {
+    text-align: center;
+    padding: 40px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
+/* Блок цитаты (тег blockquote)
+   font-size - размер шрифта
+   font-style: italic - курсив
+   color - цвет текста
+   margin - внешние отступы
+   padding - внутренние отступы
+   border-left - граница слева (синяя полоса)
+   background-color - фон */
+blockquote {
+    font-size: 24px;
+    font-style: italic;
+    color: #2c3e50;
+    margin: 20px 0;
+    padding: 20px;
+    border-left: 4px solid #3498db;
+    background-color: white;
+}
+
+/* Автор цитаты
+   font-size - размер шрифта
+   color - цвет
+   margin-top - отступ сверху */
+.quote-author {
+    font-size: 18px;
+    color: #666;
+    margin-top: 20px;
+}
+
+/* ============================================
+   Подвал (footer)
+   ============================================ */
+
+/* Подвал сайта
+   margin-top - отступ сверху
+   text-align: center - выравнивание по центру
+   color - цвет текста
+   font-size - размер шрифта */
+footer {
+    margin-top: 30px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Ссылки в подвале
+   color - цвет ссылки
+   text-decoration: none - убрать подчеркивание */
+footer a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+/* Ссылки в подвале при наведении */
+footer a:hover {
+    text-decoration: underline;
+}
+
+/* ============================================
+   Адаптивность (media queries)
+   ============================================ */
+
+/* Медиа-запрос для экранов меньше 768px
+   (мобильные устройства и планшеты)
+   @media - условная конструкция для разных размеров экрана */
+@media (max-width: 768px) {
+
+    /* Контейнер - меньшие отступы */
+    .container {
+        padding: 10px;
+    }
+
+    /* Мета-информация поста - вертикальное расположение */
+    .post-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    /* Ссылки в навигации - блочные (каждая на новой строке) */
+    nav a {
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    /* Кнопки действий - вертикальное расположение */
+    .post-actions {
+        flex-direction: column;
+    }
+
+    /* Форма поиска - вертикальное расположение */
+    .search-form {
+        flex-direction: column;
+    }
+}

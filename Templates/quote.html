@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!-- HTML5 документ -->
+<html lang="ru">
+
+<head>
+    <!-- Кодировка UTF-8 -->
+    <meta charset="UTF-8">
+    <!-- Адаптивность -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Заголовок страницы -->
+    <title>Случайная цитата - Социальная сеть</title>
+    <!-- Подключение стилей -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <!-- Контейнер -->
+    <div class="container">
+        <!-- Шапка -->
+        <header>
+            <!-- Логотип -->
+            <h1><a href="/">Социальная сеть</a></h1>
+            <!-- Навигация -->
+            <nav>
+                <a href="/">Главная</a>
+                <a href="/search">Поиск</a>
+                <a href="/random_quote">Случайная цитата</a>
+            </nav>
+        </header>
+
+        <!-- Основной контент -->
+        <main>
+            <!-- Секция с цитатой -->
+            <section class="quote">
+                <!-- Заголовок секции -->
+                <h2>Случайная цитата</h2>
+                <!-- Тег blockquote для цитаты -->
+                <blockquote>
+                    <!-- Переменная с текстом цитаты -->
+                    <!-- {{ quote }} - текст полученный от внешнего API -->
+                    "{{ quote }}"
+                </blockquote>
+                <!-- Автор цитаты -->
+                <!-- {{ author }} - имя автора цитаты -->
+                <p class="quote-author">— {{ author }}</p>
+                <!-- Кнопки действий -->
+                <p>
+                    <!-- Ссылка для получения новой цитаты (обновляет страницу) -->
+                    <a href="/random_quote" class="btn">Новая цитата</a>
+                    <!-- Ссылка на главную страницу -->
+                    <a href="/" class="btn">На главную</a>
+                </p>
+            </section>
+        </main>
+
+        <!-- Подвал -->
+        <footer>
+            <!-- Указание источника цитат -->
+            <p>Источник цитат: <a href="https://api.quotable.io">Quotable API</a></p>
+        </footer>
+    </div>
+</body>
+
+</html>

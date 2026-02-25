@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!-- Тип документа HTML5 -->
+<html lang="ru">
+
+<head>
+    <!-- Кодировка UTF-8 для поддержки русских символов -->
+    <meta charset="UTF-8">
+    <!-- Адаптивность для мобильных устройств -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Динамический заголовок страницы -->
+    <!-- {{ post.title }} - подставляется заголовок поста из переменной -->
+    <title>{{ post.title }} - Социальная сеть</title>
+    <!-- Подключение файла стилей -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <!-- Основной контейнер -->
+    <div class="container">
+        <!-- Шапка сайта -->
+        <header>
+            <!-- Логотип/название - ссылка на главную -->
+            <h1><a href="/">Социальная сеть</a></h1>
+            <!-- Навигационное меню -->
+            <nav>
+                <a href="/">Главная</a>
+                <a href="/search">Поиск</a>
+                <a href="/random_quote">Случайная цитата</a>
+            </nav>
+        </header>
+
+        <!-- Основной контент -->
+        <main>
+            <!-- Статья с полным постом -->
+            <article class="post-full">
+                <!-- Заголовок поста -->
+                <h2>{{ post.title }}</h2>
+                <!-- Мета-информация -->
+                <div class="post-meta">
+                    <!-- Автор поста со ссылкой на его профиль -->
+                    <span class="author">Автор: <a href="/users/{{ post.author }}">{{ post.author }}</a></span>
+                    <!-- Количество просмотров -->
+                    <span class="views">👁 {{ post.views }}</span>
+                    <!-- Количество лайков -->
+                    <span class="likes">❤ {{ post.likes }}</span>
+                </div>
+                <!-- Полное содержимое поста -->
+                <div class="post-content">
+                    <!-- {{ post.content }} - полный текст поста -->
+                    {{ post.content }}
+                </div>
+            </article>
+
+            <!-- Секция комментариев -->
+            <section class="comments">
+                <!-- Заголовок секции с количеством комментариев -->
+                <!-- comments|length - фильтр Jinja2 для подсчета элементов -->
+                <h3>Комментарии ({{ comments|length }})</h3>
+
+                <!-- Проверка: есть ли комментарии -->
+                {% if comments %}
+                <!-- Цикл по всем комментариям к посту -->
+                {% for comment in comments %}
+                <!-- Блок отдельного комментария -->
+                <div class="comment">
+                    <!-- Мета-информация комментария (автор) -->
+                    <div class="comment-meta">
+                        <!-- Имя автора комментария -->
+                        <strong>{{ comment.author }}</strong>
+                    </div>
+                    <!-- Содержимое комментария -->
+                    <div class="comment-content">
+                        {{ comment.content }}
+                    </div>
+                </div>
+                <!-- Конец цикла комментариев -->
+                {% endfor %}
+                {% else %}
+                <!-- Сообщение если комментариев нет -->
+                <p>Пока нет комментариев.</p>
+                {% endif %}
+
+                <!-- Форма добавления нового комментария -->
+                <!-- action - URL куда отправляется форма -->
+                <!-- method="post" - метод передачи данных (скрыто в теле запроса) -->
+                <form action="/posts/{{ post.id }}/comment" method="post" class="comment-form">
+                    <h4>Добавить комментарий</h4>
+                    <div>
+                        <!-- Поле ввода имени автора комментария -->
+                        <!-- required - обязательное поле (нельзя отправить пустым) -->
+                        <input type="text" name="author" placeholder="Ваше имя" required>
+                    </div>
+                    <div>
+                        <!-- Текстовое поле для комментария -->
+                        <!-- rows="4" - высота поля в 4 строки -->
+                        <textarea name="content" placeholder="Текст комментария" rows="4" required></textarea>
+                    </div>
+                    <!-- Кнопка отправки формы -->
+                    <button type="submit">Отправить</button>
+                </form>
+            </section>
+        </main>
+
+        <!-- Подвал страницы -->
+        <footer>
+            <!-- Ссылка возврата на главную страницу -->
+            <p><a href="/">← Назад к списку постов</a></p>
+        </footer>
+    </div>
+</body>
+
+</html>

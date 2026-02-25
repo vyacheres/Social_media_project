@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!-- HTML5 документ -->
+<html lang="ru">
+
+<head>
+    <!-- Кодировка UTF-8 -->
+    <meta charset="UTF-8">
+    <!-- Адаптивность для мобильных -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Динамический заголовок с именем автора -->
+    <!-- {{ username }} - имя пользователя из URL -->
+    <title>Посты {{ username }} - Социальная сеть</title>
+    <!-- Подключение CSS стилей -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <!-- Контейнер -->
+    <div class="container">
+        <!-- Шапка -->
+        <header>
+            <!-- Название - ссылка на главную -->
+            <h1><a href="/">Социальная сеть</a></h1>
+            <!-- Навигация -->
+            <nav>
+                <a href="/">Главная</a>
+                <a href="/search">Поиск</a>
+                <a href="/random_quote">Случайная цитата</a>
+            </nav>
+        </header>
+
+        <!-- Основной контент -->
+        <main>
+            <!-- Заголовок с именем автора -->
+            <h2>Все посты автора: {{ username }}</h2>
+
+            <!-- Если у автора есть посты -->
+            {% if posts %}
+            <!-- Количество постов автора -->
+            <p>Найдено {{ posts|length }} постов:</p>
+            <!-- Цикл по постам автора -->
+            {% for post in posts %}
+            <article class="post">
+                <!-- Заголовок поста -->
+                <h3><a href="/posts/{{ post.id }}">{{ post.title }}</a></h3>
+                <!-- Мета-информация -->
+                <div class="post-meta">
+                    <!-- Автор (уже на странице автора, поэтому без ссылки) -->
+                    <span class="author">Автор: {{ post.author }}</span>
+                    <!-- Просмотры -->
+                    <span class="views">👁 {{ post.views }}</span>
+                    <!-- Лайки -->
+                    <span class="likes">❤ {{ post.likes }}</span>
+                </div>
+                <!-- Краткий контент (100 символов) -->
+                <div class="post-content">
+                    {{ post.content[:100] }}{% if post.content|length > 100 %}...{% endif %}
+                </div>
+                <!-- Кнопка подробнее -->
+                <div class="post-actions">
+                    <a href="/posts/{{ post.id }}" class="btn">Подробнее</a>
+                </div>
+            </article>
+            {% endfor %}
+            {% else %}
+            <!-- Если у автора нет постов -->
+            <p>У этого автора пока нет постов.</p>
+            {% endif %}
+        </main>
+
+        <!-- Подвал -->
+        <footer>
+            <p><a href="/">← Назад к списку постов</a></p>
+        </footer>
+    </div>
+</body>
+
+</html>
