@@ -1,8 +1,15 @@
-"""Валидация входных данных (Pydantic)."""
+"""
+Схемы Pydantic для валидации данных форм до записи в БД.
+
+Используются в main.py: при ошибке возвращается HTML с сообщением,
+а не «сырой» JSON 422 (удобнее для шаблонных страниц).
+"""
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PostCreate(BaseModel):
+    """Новый пост: ограничения по длине и запрет строк из одних пробелов."""
+
     model_config = ConfigDict(str_strip_whitespace=True)
 
     title: str = Field(min_length=1, max_length=100)
@@ -17,6 +24,8 @@ class PostCreate(BaseModel):
 
 
 class CommentCreate(BaseModel):
+    """Текст комментария с ограничением длины."""
+
     model_config = ConfigDict(str_strip_whitespace=True)
 
     content: str = Field(min_length=1, max_length=10_000)
@@ -30,6 +39,8 @@ class CommentCreate(BaseModel):
 
 
 class RegisterUser(BaseModel):
+    """Регистрация: логин (буквы/цифры/_) и пароль не короче 8 символов."""
+
     model_config = ConfigDict(str_strip_whitespace=True)
 
     username: str = Field(min_length=3, max_length=50)
@@ -52,6 +63,8 @@ class RegisterUser(BaseModel):
 
 
 class LoginUser(BaseModel):
+    """Минимальная проверка полей формы входа (детальная проверка — в БД)."""
+
     model_config = ConfigDict(str_strip_whitespace=True)
 
     username: str = Field(min_length=1, max_length=50)

@@ -1,4 +1,9 @@
-"""Интеграционные тесты приложения."""
+"""Интеграционные тесты приложения.
+
+Покрывают: защиту JSON API, поиск с символом %, CSRF, редиректы без логина,
+счётчик просмотров на сессию, заголовки безопасности, сценарий пост+комментарий,
+защиту от open redirect после входа.
+"""
 import pytest
 
 import crud
@@ -7,10 +12,12 @@ from tests.conftest import parse_csrf
 
 
 def _db():
+    """Прямая сессия к той же БД, что и у dependency override (сид в тестах)."""
     return app._test_session_factory()
 
 
 def _add_post(title: str, content: str, author: str = "seed"):
+    """Создаёт пост через CRUD, минуя HTML-формы."""
     db = _db()
     try:
         return crud.create_post(db, title=title, content=content, author=author)
@@ -19,6 +26,7 @@ def _add_post(title: str, content: str, author: str = "seed"):
 
 
 def _register(client, username: str = "alice", password: str = "password12"):
+    """Регистрация пользователя через HTTP с валидным CSRF."""
     r = client.get("/register")
     assert r.status_code == 200
     token = parse_csrf(r.text)
@@ -35,6 +43,7 @@ def _register(client, username: str = "alice", password: str = "password12"):
 
 
 def _login(client, username: str, password: str, next_url: str = ""):
+    """Вход по паролю; next_url попадает в скрытое поле формы."""
     r = client.get("/login")
     assert r.status_code == 200
     token = parse_csrf(r.text)

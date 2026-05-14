@@ -1,3 +1,10 @@
+"""
+Операции чтения/записи в базе данных (слой CRUD).
+
+Здесь нет HTTP-логики: только SQLAlchemy Session и модели из ``models``.
+Поиск постов использует LIKE с ESCAPE, чтобы символы % и _ в запросе
+не работали как шаблоны SQL.
+"""
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -5,13 +12,12 @@ import models
 
 
 def escape_like_pattern(query: str) -> str:
-    """Экранирование % и _ для LIKE (SQLite), обратный слэш — первым."""
-    return (
-        query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    )
+    """Экранирует спецсимволы LIKE: сначала ``\\``, затем ``%`` и ``_``."""
+    return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def get_user_by_username(db: Session, username: str):
+    """Возвращает запись пользователя по уникальному логину или None."""
     return (
         db.query(models.User)
         .filter(models.User.username == username)
@@ -20,6 +26,7 @@ def get_user_by_username(db: Session, username: str):
 
 
 def create_user(db: Session, username: str, password_hash: str):
+    """Создаёт пользователя (хеш пароля должен быть уже посчитан, см. auth_utils)."""
     db_user = models.User(username=username, password_hash=password_hash)
     db.add(db_user)
     db.commit()
@@ -28,22 +35,22 @@ def create_user(db: Session, username: str, password_hash: str):
 
 
 def get_post(db: Session, post_id: int):
-    # Возвращаем пост по идентификатору
+    """Один пост по первичному ключу."""
     return db.query(models.Post).filter(models.Post.id == post_id).first()
 
 
 def get_posts(db: Session, skip: int = 0, limit: int = 100):
-    # Возвращаем посты, пропуская skip элементов и ограничивая limit
+    """Список постов с пагинацией (offset/limit)."""
     return db.query(models.Post).offset(skip).limit(limit).all()
 
 
 def get_posts_by_user(db: Session, author: str):
-    # Возвращаем все посты определенного автора
+    """Все посты, у которых поле author совпадает со строкой (логин из сессии при создании)."""
     return db.query(models.Post).filter(models.Post.author == author).all()
 
 
 def create_post(db: Session, title: str, content: str, author: str):
-    # Создаем новый пост и сохраняем его в базе данных
+    """Создаёт пост; author задаётся только сервером из сессии залогиненного пользователя."""
     db_post = models.Post(title=title, content=content, author=author)
     db.add(db_post)
     db.commit()
@@ -52,7 +59,11 @@ def create_post(db: Session, title: str, content: str, author: str):
 
 
 def search_posts(db: Session, query: str):
-    """Поиск без интерпретации % и _ как шаблонов LIKE."""
+    """
+    Поиск по подстроке в заголовке или теле поста.
+
+    Строка запроса не интерпретируется как wildcard LIKE: ``%`` и ``_`` — обычные символы.
+    """
     raw = query.strip()
     if not raw:
         return []
@@ -70,7 +81,7 @@ def search_posts(db: Session, query: str):
 
 
 def add_comment(db: Session, post_id: int, author: str, content: str):
-    # Добавляем комментарий к посту
+    """Добавляет комментарий к посту (author — из сессии, не из формы)."""
     db_comment = models.Comment(post_id=post_id, author=author, content=content)
     db.add(db_comment)
     db.commit()
@@ -79,5 +90,5 @@ def add_comment(db: Session, post_id: int, author: str, content: str):
 
 
 def get_comments_by_post(db: Session, post_id: int):
-    # Возвращаем все комментарии для определенного поста
+    """Все комментарии для указанного поста."""
     return db.query(models.Comment).filter(models.Comment.post_id == post_id).all()

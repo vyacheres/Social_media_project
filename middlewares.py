@@ -1,11 +1,17 @@
-"""HTTP middleware."""
+"""
+ASGI-middleware на базе Starlette BaseHTTPMiddleware.
+
+- SecurityHeadersMiddleware — добавляет «безопасные» HTTP-заголовки к ответу.
+- CsrfSessionMiddleware — до обработки маршрута вызывает ensure_session_csrf,
+  чтобы в сессии всегда был токен для шаблонов (после SessionMiddleware).
+"""
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from auth_utils import ensure_session_csrf
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Базовые заголовки безопасности для ответов."""
+    """Снижает риск MIME-sniffing, clickjacking и утечки полного URL в Referer."""
 
     async def dispatch(self, request, call_next):
         response = await call_next(request)
@@ -16,7 +22,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class CsrfSessionMiddleware(BaseHTTPMiddleware):
-    """Гарантирует наличие CSRF-токена в сессии до обработки маршрута."""
+    """Готовит CSRF-токен в сессии до вызова обработчиков маршрутов."""
 
     async def dispatch(self, request, call_next):
         ensure_session_csrf(request)

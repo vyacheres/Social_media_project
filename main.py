@@ -1,7 +1,16 @@
-# Импорт необходимых классов и функций из библиотек
+"""
+Точка входа веб-приложения «Социальная сеть» (FastAPI).
+
+Здесь собраны маршруты HTML и JSON, подключение middleware (сессия, CSRF,
+заголовки безопасности), лимиты запросов (slowapi) и раздача статики.
+
+Важно: маршрут ``/posts/create`` объявлен выше ``/posts/{post_id}``, иначе
+слово ``create`` попадёт в параметр ``post_id`` и даст ошибку валидации.
+"""
 import secrets
 from urllib.parse import quote
 
+# HTTP-клиент для запроса цитат у внешнего API
 import httpx
 from fastapi import Depends, FastAPI, Form, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -28,6 +37,11 @@ from settings import settings
 
 
 def require_login(request: Request, next_path: str) -> str:
+    """
+    Возвращает имя пользователя из сессии или отдаёт редирект на /login?next=...
+
+    next_path — куда вернуть пользователя после успешного входа (относительный URL).
+    """
     user = request.session.get("username")
     if not user:
         raise HTTPException(
@@ -38,6 +52,7 @@ def require_login(request: Request, next_path: str) -> str:
     return user
 
 
+# Лимитер: ключ по IP; можно отключить переменной DISABLE_RATE_LIMIT (см. settings)
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[],
@@ -48,6 +63,7 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Порядок middleware: внешний слой первым в цепочке запроса — см. middlewares.py
 app.add_middleware(CsrfSessionMiddleware)
 app.add_middleware(
     SessionMiddleware,
@@ -57,7 +73,9 @@ app.add_middleware(
 )
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Статика по префиксу /static
 app.mount("/static", StaticFiles(directory="Static"), name="static")
+# Jinja2: шаблоны в каталоге Templates; request передаётся первым аргументом TemplateResponse
 templates = Jinja2Templates(directory="Templates")
 
 
@@ -70,12 +88,14 @@ def _api_authorized(request: Request, x_api_key: str | None) -> bool:
     return False
 
 
+# --- Главная: лента постов (до 100 шт. по умолчанию в crud.get_posts) ---
 @app.get("/", response_class=HTMLResponse)
 async def read_posts(request: Request, db: Session = Depends(get_db)):
     posts = crud.get_posts(db)
     return templates.TemplateResponse(request, "index.html", {"posts": posts})
 
 
+# --- Создание поста (только авторизованный; автор подставляется с сервера) ---
 @app.get("/posts/create", response_class=HTMLResponse)
 async def create_post_form(request: Request):
     if not request.session.get("username"):
@@ -116,6 +136,7 @@ async def create_post(
     )
 
 
+# --- Просмотр поста: счётчик views не чаще одного раза на id в рамках сессии ---
 @app.get("/posts/{post_id}", response_class=HTMLResponse)
 async def read_post(request: Request, post_id: int, db: Session = Depends(get_db)):
     post = crud.get_post(db, post_id)
@@ -139,6 +160,7 @@ async def read_post(request: Request, post_id: int, db: Session = Depends(get_db
     )
 
 
+# --- Комментарий: автор из сессии, CSRF обязателен ---
 @app.post("/posts/{post_id}/comment", response_class=HTMLResponse)
 @limiter.limit("60/minute")
 async def add_comment(
@@ -175,6 +197,7 @@ async def add_comment(
     )
 
 
+# --- Поиск и страница «все посты автора» (строка author в таблице posts) ---
 @app.get("/search", response_class=HTMLResponse)
 async def search_posts(request: Request, s: str = "", db: Session = Depends(get_db)):
     results = []
@@ -193,6 +216,7 @@ async def user_posts(request: Request, username: str, db: Session = Depends(get_
     )
 
 
+# --- JSON API: только сессия с логином или заголовок X-API-Key (если задан API_KEY) ---
 @app.get("/api/posts")
 async def api_get_posts(
     request: Request,
@@ -237,6 +261,7 @@ async def api_get_post(
     }
 
 
+# --- Регистрация и вход (редирект после логина защищён от open redirect) ---
 @app.get("/register", response_class=HTMLResponse)
 async def register_form(request: Request):
     return templates.TemplateResponse(request, "register.html", {})
@@ -325,6 +350,7 @@ async def login_submit(
     return RedirectResponse(dest, status_code=303)
 
 
+# --- Выход: очистка сессии (имя и CSRF-токен) ---
 @app.post("/logout")
 async def logout(
     request: Request,
@@ -335,6 +361,7 @@ async def logout(
     return RedirectResponse("/", status_code=303)
 
 
+# --- Случайная цитата с quotable.io (сеть недоступна — показываем заглушку) ---
 @app.get("/random_quote", response_class=HTMLResponse)
 async def random_quote(request: Request):
     try:
@@ -353,6 +380,7 @@ async def random_quote(request: Request):
 
 
 if __name__ == "__main__":
+    # Режим разработки: автоперезагрузка при изменении кода
     import uvicorn
 
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

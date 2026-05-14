@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Simple functionality test for social media project
+Проверка файла SQLite ``social_media.db`` без запуска веб-сервера.
+
+Скрипт для ручной диагностики: выводит наличие таблиц и счётчики записей.
+Запуск из корня проекта: ``python simple_test.py``
 """
 import sqlite3
 import os
@@ -30,7 +33,7 @@ def check_database():
         
         print(f"\nTables in database: {tables}")
         
-        required_tables = ['posts', 'comments']
+        required_tables = ['posts', 'comments', 'users']
         missing_tables = [table for table in required_tables if table not in tables]
         
         if missing_tables:

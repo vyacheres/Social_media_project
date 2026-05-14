@@ -1,30 +1,31 @@
+"""
+Подключение к базе данных и фабрика сессий SQLAlchemy.
+
+URL берётся из переменной окружения DATABASE_URL (см. settings и .env.example).
+По умолчанию — файл SQLite ``social_media.db`` в корне проекта.
+
+``get_db`` подключается в FastAPI как Depends: сессия создаётся на запрос
+и закрывается в блоке finally.
+"""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 from settings import settings
 
-# URL БД из окружения (по умолчанию SQLite в файле social_media.db)
 SQLALCHEMY_DATABASE_URL = settings.database_url
 
-# Создаем движок SQLAlchemy.
-# connect_args={"check_same_thread": False} необходим для SQLite при работе с FastAPI
-# во избежание проблем с многопоточностью.
+# Для SQLite в связке с FastAPI отключаем проверку «один поток — одно соединение»
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 
-# Создаем класс SessionLocal, который будет экземпляром сессии базы данных.
-# autocommit=False гарантирует, что изменения не будут автоматически зафиксированы.
-# autoflush=False отключает автоматическую очистку сессии.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Базовый класс для объявления моделей SQLAlchemy.
 Base = declarative_base()
 
 
-# Функция для получения сессии базы данных.
-# Используется как зависимость в FastAPI маршрутах.
 def get_db():
+    """Зависимость FastAPI: выдаёт сессию БД и гарантирует её закрытие."""
     db = SessionLocal()
     try:
         yield db

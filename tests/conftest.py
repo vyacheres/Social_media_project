@@ -1,4 +1,12 @@
-"""Pytest: изолированная БД в памяти и отключение rate limit."""
+"""
+Фикстуры pytest для приложения Social Media.
+
+Перед импортом main задаются SECRET_KEY и DISABLE_RATE_LIMIT, чтобы
+сессии подписывались и лимиты slowapi не мешали тестам.
+
+База — SQLite в памяти с StaticPool: все соединения делят одну БД,
+иначе create_all и запросы через TestClient попадали бы в разные :memory:.
+"""
 import os
 import re
 
@@ -17,6 +25,7 @@ from main import app  # noqa: E402
 
 @pytest.fixture()
 def client():
+    """HTTP-клиент к приложению с подменённой БД на время теста."""
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -43,6 +52,7 @@ def client():
 
 
 def parse_csrf(html: str) -> str:
+    """Достаёт значение скрытого поля csrf_token из HTML (для POST в тестах)."""
     m = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
     assert m, "csrf_token not found in HTML"
     return m.group(1)
