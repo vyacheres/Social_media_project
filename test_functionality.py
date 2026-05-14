@@ -4,6 +4,7 @@
 Проверяет CRUD операции, работу с базой данных и основные функции.
 """
 import sys
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal
 import models
@@ -15,15 +16,17 @@ def test_database_connection():
     try:
         # Проверяем существование таблиц
         with engine.connect() as connection:
-            result = connection.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            result = connection.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table';")
+            )
             tables = [row[0] for row in result]
             print(f"   Найдены таблицы: {tables}")
             
-            if 'posts' in tables and 'comments' in tables:
-                print("   ✓ Таблицы posts и comments существуют")
+            if 'posts' in tables and 'comments' in tables and 'users' in tables:
+                print("   ✓ Таблицы posts, comments и users существуют")
                 return True
             else:
-                print("   ✗ Таблицы posts или comments отсутствуют")
+                print("   ✗ Таблицы posts, comments или users отсутствуют")
                 return False
     except Exception as e:
         print(f"   ✗ Ошибка подключения: {e}")

@@ -1,0 +1,14 @@
+<a href="/">Главная</a>
+<a href="/search">Поиск</a>
+<a href="/random_quote">Случайная цитата</a>
+{% if request.session.get('username') %}
+<a href="/posts/create">Новый пост</a>
+<span class="nav-user">{{ request.session.get('username') }}</span>
+<form action="/logout" method="post" class="nav-logout">
+    <input type="hidden" name="csrf_token" value="{{ request.session.get('_csrf', '') }}">
+    <button type="submit">Выйти</button>
+</form>
+{% else %}
+<a href="/login">Войти</a>
+<a href="/register">Регистрация</a>
+{% endif %}

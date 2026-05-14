@@ -1,5 +1,30 @@
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
+
 import models
+
+
+def escape_like_pattern(query: str) -> str:
+    """Экранирование % и _ для LIKE (SQLite), обратный слэш — первым."""
+    return (
+        query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
+
+
+def get_user_by_username(db: Session, username: str):
+    return (
+        db.query(models.User)
+        .filter(models.User.username == username)
+        .first()
+    )
+
+
+def create_user(db: Session, username: str, password_hash: str):
+    db_user = models.User(username=username, password_hash=password_hash)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 
 def get_post(db: Session, post_id: int):
@@ -27,10 +52,19 @@ def create_post(db: Session, title: str, content: str, author: str):
 
 
 def search_posts(db: Session, query: str):
-    # Ищем посты по заголовку или содержимому
+    """Поиск без интерпретации % и _ как шаблонов LIKE."""
+    raw = query.strip()
+    if not raw:
+        return []
+    pattern = f"%{escape_like_pattern(raw)}%"
     return (
         db.query(models.Post)
-        .filter(models.Post.title.contains(query) | models.Post.content.contains(query))
+        .filter(
+            or_(
+                models.Post.title.like(pattern, escape="\\"),
+                models.Post.content.like(pattern, escape="\\"),
+            )
+        )
         .all()
     )
 

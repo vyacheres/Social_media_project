@@ -23,9 +23,7 @@
             <h1><a href="/">Социальная сеть</a></h1>
             <!-- Навигационное меню -->
             <nav>
-                <a href="/">Главная</a>
-                <a href="/search">Поиск</a>
-                <a href="/random_quote">Случайная цитата</a>
+                {% include 'partials/nav.html' %}
             </nav>
         </header>
 
@@ -80,24 +78,22 @@
                 <p>Пока нет комментариев.</p>
                 {% endif %}
 
-                <!-- Форма добавления нового комментария -->
-                <!-- action - URL куда отправляется форма -->
-                <!-- method="post" - метод передачи данных (скрыто в теле запроса) -->
+                {% if comment_error %}
+                <p class="error">{{ comment_error }}</p>
+                {% endif %}
+
+                {% if request.session.get('username') %}
                 <form action="/posts/{{ post.id }}/comment" method="post" class="comment-form">
                     <h4>Добавить комментарий</h4>
+                    {% include 'partials/csrf_field.html' %}
                     <div>
-                        <!-- Поле ввода имени автора комментария -->
-                        <!-- required - обязательное поле (нельзя отправить пустым) -->
-                        <input type="text" name="author" placeholder="Ваше имя" required>
+                        <textarea name="content" placeholder="Текст комментария" rows="4" required maxlength="10000"></textarea>
                     </div>
-                    <div>
-                        <!-- Текстовое поле для комментария -->
-                        <!-- rows="4" - высота поля в 4 строки -->
-                        <textarea name="content" placeholder="Текст комментария" rows="4" required></textarea>
-                    </div>
-                    <!-- Кнопка отправки формы -->
                     <button type="submit">Отправить</button>
                 </form>
+                {% else %}
+                <p><a href="/login?next=/posts/{{ post.id }}">Войдите</a>, чтобы оставить комментарий.</p>
+                {% endif %}
             </section>
         </main>
 

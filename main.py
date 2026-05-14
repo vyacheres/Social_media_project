@@ -1,161 +1,232 @@
 # Импорт необходимых классов и функций из библиотек
-# FastAPI - веб-фреймворк для создания API
-# Request - объект запроса для работы с HTTP-запросами
-# Depends - для внедрения зависимостей (например, сессии БД)
-# Form - для обработки данных форм
-# HTTPException - для генерации HTTP-ошибок
-from fastapi import FastAPI, Request, Depends, Form, HTTPException
+import secrets
+from urllib.parse import quote
 
-# Импорт классов для работы с ответами
-# HTMLResponse - для возврата HTML-страниц
-# StaticFiles - для раздачи статических файлов (CSS, JS, изображения)
-# Jinja2Templates - для рендеринга HTML-шаблонов с данными
-from fastapi.responses import HTMLResponse
+import httpx
+from fastapi import Depends, FastAPI, Form, Header, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
-# Импорт Session из SQLAlchemy для работы с базой данных
+from pydantic import ValidationError
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
+from starlette.middleware.sessions import SessionMiddleware
 
-# Импорт функций CRUD операций из модуля crud
 import crud
-
-# Импорт функции get_db для получения сессии базы данных
+from auth_utils import (
+    ensure_session_csrf,
+    hash_password,
+    validate_csrf,
+    verify_password,
+)
 from database import get_db
+from middlewares import CsrfSessionMiddleware, SecurityHeadersMiddleware
+from schemas import CommentCreate, LoginUser, PostCreate, RegisterUser
+from settings import settings
 
-# Импорт httpx для выполнения HTTP-запросов к внешним API
-import httpx
 
-# Создание экземпляра приложения FastAPI
-# title - название приложения
-# description - описание (можно добавить)
+def require_login(request: Request, next_path: str) -> str:
+    user = request.session.get("username")
+    if not user:
+        raise HTTPException(
+            status_code=303,
+            detail="Требуется вход",
+            headers={"Location": "/login?next=" + quote(next_path, safe="")},
+        )
+    return user
+
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[],
+    enabled=not settings.disable_rate_limit,
+)
+
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Монтирование директории со статическими файлами по пути /static
-# Теперь файлы из папки Static доступны по адресу http://127.0.0.1:8000/static/...
+app.add_middleware(CsrfSessionMiddleware)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    same_site="lax",
+    https_only=False,
+)
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.mount("/static", StaticFiles(directory="Static"), name="static")
-
-# Настройка шаблонизатора Jinja2
-# Указываем директорию с HTML-шаблонами
 templates = Jinja2Templates(directory="Templates")
 
 
-# Маршрут главной страницы - отображает список всех постов
-# @app.get("/") - декоратор, обрабатывающий GET-запросы на корень сайта
-# response_class=HTMLResponse - указывает, что возвращается HTML
-# async def - асинхронная функция
-# request: Request - объект HTTP-запроса (обязателен для шаблонов)
-# db: Session = Depends(get_db) - внедрение сессии БД через зависимость
+def _api_authorized(request: Request, x_api_key: str | None) -> bool:
+    """Доступ к JSON API: сессия с логином или корректный X-API-Key."""
+    if request.session.get("username"):
+        return True
+    if settings.api_key and x_api_key:
+        return secrets.compare_digest(x_api_key, settings.api_key)
+    return False
+
+
 @app.get("/", response_class=HTMLResponse)
 async def read_posts(request: Request, db: Session = Depends(get_db)):
-    # Получение всех постов из базы данных через CRUD
     posts = crud.get_posts(db)
+    return templates.TemplateResponse(request, "index.html", {"posts": posts})
 
-    # Рендеринг шаблона index.html с передачей данных
-    # templates.TemplateResponse - метод для рендеринга шаблона
-    # {"request": request, "posts": posts} - словарь с данными для шаблона
+
+@app.get("/posts/create", response_class=HTMLResponse)
+async def create_post_form(request: Request):
+    if not request.session.get("username"):
+        return RedirectResponse(
+            "/login?next=" + quote("/posts/create", safe=""),
+            status_code=303,
+        )
+    return templates.TemplateResponse(request, "create_post.html", {})
+
+
+@app.post("/posts/create", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def create_post(
+    request: Request,
+    title: str = Form(...),
+    content: str = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    validate_csrf(request, csrf_token)
+    author = require_login(request, "/posts/create")
+    try:
+        body = PostCreate(title=title, content=content)
+    except ValidationError as e:
+        err = e.errors()[0].get("msg", "Ошибка валидации")
+        return templates.TemplateResponse(
+            request,
+            "create_post.html",
+            {"error": str(err), "title": title, "content": content},
+            status_code=400,
+        )
+    new_post = crud.create_post(
+        db, title=body.title, content=body.content, author=author
+    )
+    comments = crud.get_comments_by_post(db, new_post.id)
     return templates.TemplateResponse(
-        "index.html", {"request": request, "posts": posts}
+        request, "post.html", {"post": new_post, "comments": comments}
     )
 
 
-# Маршрут просмотра отдельного поста
-# {post_id} - параметр URL, который передается в функцию
 @app.get("/posts/{post_id}", response_class=HTMLResponse)
 async def read_post(request: Request, post_id: int, db: Session = Depends(get_db)):
-    # Получение поста по ID из базы данных
     post = crud.get_post(db, post_id)
-
-    # Проверка, найден ли пост
-    # Если пост не найден - генерируем ошибку 404
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
 
-    # Получение комментариев для этого поста
     comments = crud.get_comments_by_post(db, post_id)
 
-    # Увеличение счетчика просмотров на 1
-    # post.views += 1 - инкремент поля views
-    post.views += 1
+    viewed = request.session.get("viewed_post_ids") or []
+    if post_id not in viewed:
+        post.views += 1
+        db.commit()
+        db.refresh(post)
+        viewed = [*viewed, post_id]
+        if len(viewed) > 120:
+            viewed = viewed[-120:]
+        request.session["viewed_post_ids"] = viewed
 
-    # Сохранение изменений в базе данных
-    db.commit()
-
-    # Обновление объекта post данными из БД (для получения актуальных значений)
-    db.refresh(post)
-
-    # Рендеринг шаблона post.html с данными поста и комментариев
     return templates.TemplateResponse(
-        "post.html", {"request": request, "post": post, "comments": comments}
+        request, "post.html", {"post": post, "comments": comments}
     )
 
 
-# Маршрут поиска постов
-# s - параметр запроса (query parameter), например: /search?s=текст
+@app.post("/posts/{post_id}/comment", response_class=HTMLResponse)
+@limiter.limit("60/minute")
+async def add_comment(
+    request: Request,
+    post_id: int,
+    content: str = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    validate_csrf(request, csrf_token)
+    author = require_login(request, f"/posts/{post_id}")
+    post = crud.get_post(db, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Пост не найден")
+    try:
+        body = CommentCreate(content=content)
+    except ValidationError as e:
+        err = e.errors()[0].get("msg", "Ошибка валидации")
+        comments = crud.get_comments_by_post(db, post_id)
+        return templates.TemplateResponse(
+            request,
+            "post.html",
+            {
+                "post": post,
+                "comments": comments,
+                "comment_error": str(err),
+            },
+            status_code=400,
+        )
+    crud.add_comment(db, post_id=post_id, author=author, content=body.content)
+    comments = crud.get_comments_by_post(db, post_id)
+    return templates.TemplateResponse(
+        request, "post.html", {"post": post, "comments": comments}
+    )
+
+
 @app.get("/search", response_class=HTMLResponse)
 async def search_posts(request: Request, s: str = "", db: Session = Depends(get_db)):
-    # Пустой список для результатов поиска
     results = []
-
-    # Проверка, что поисковый запрос не пустой
-    # .strip() удаляет пробелы в начале и конце строки
     if s.strip():
-        # Выполнение поиска через CRUD
-        # Функция ищет по заголовку и содержимому поста
         results = crud.search_posts(db, s.strip())
-
-    # Рендеринг шаблона search.html с результатами и исходным запросом
     return templates.TemplateResponse(
-        "search.html", {"request": request, "posts": results, "query": s}
+        request, "search.html", {"posts": results, "query": s}
     )
 
 
-# Маршрут страницы пользователя
-# {username} - имя пользователя в URL
 @app.get("/users/{username}", response_class=HTMLResponse)
 async def user_posts(request: Request, username: str, db: Session = Depends(get_db)):
-    # Получение всех постов конкретного автора
     posts = crud.get_posts_by_user(db, username)
-
-    # Рендеринг шаблона user.html с постами и именем пользователя
     return templates.TemplateResponse(
-        "user.html", {"request": request, "posts": posts, "username": username}
+        request, "user.html", {"posts": posts, "username": username}
     )
 
 
-# API маршрут для получения списка постов в формате JSON
-# Этот маршрут не возвращает HTML, а возвращает данные в JSON формате
 @app.get("/api/posts")
-async def api_get_posts(db: Session = Depends(get_db)):
-    # Получение всех постов из БД
+async def api_get_posts(
+    request: Request,
+    db: Session = Depends(get_db),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+):
+    if not _api_authorized(request, x_api_key):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     posts = crud.get_posts(db)
-
-    # Преобразование объектов SQLAlchemy в словари Python
-    # Генератор списка - для каждого поста создаем словарь с нужными полями
     return [
         {
-            "id": p.id,  # ID поста
-            "title": p.title,  # Заголовок поста
-            "author": p.author,  # Автор поста
-            "content": p.content,  # Содержимое поста
-            "views": p.views,  # Количество просмотров
-            "likes": p.likes,  # Количество лайков
+            "id": p.id,
+            "title": p.title,
+            "author": p.author,
+            "content": p.content,
+            "views": p.views,
+            "likes": p.likes,
         }
-        for p in posts  # для каждого поста p в списке posts
+        for p in posts
     ]
 
 
-# API маршрут для получения одного поста по ID в формате JSON
 @app.get("/api/posts/{post_id}")
-async def api_get_post(post_id: int, db: Session = Depends(get_db)):
-    # Получение поста по ID
+async def api_get_post(
+    request: Request,
+    post_id: int,
+    db: Session = Depends(get_db),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+):
+    if not _api_authorized(request, x_api_key):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     post = crud.get_post(db, post_id)
-
-    # Если пост не найден - ошибка 404
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
-
-    # Возврат данных поста в виде словаря (FastAPI автоматически конвертирует в JSON)
     return {
         "id": post.id,
         "title": post.title,
@@ -166,104 +237,122 @@ async def api_get_post(post_id: int, db: Session = Depends(get_db)):
     }
 
 
-# Маршрут создания нового поста (обработка формы)
-# @app.post - декоратор для POST-запросов
-# Form(...) - обязательные поля формы
-@app.post("/posts/create", response_class=HTMLResponse)
-async def create_post(
-    request: Request,  # Объект запроса
-    title: str = Form(...),  # Заголовок поста из формы
-    content: str = Form(...),  # Содержимое поста из формы
-    author: str = Form(...),  # Автор поста из формы
-    db: Session = Depends(get_db),  # Сессия БД
+@app.get("/register", response_class=HTMLResponse)
+async def register_form(request: Request):
+    return templates.TemplateResponse(request, "register.html", {})
+
+
+@app.post("/register")
+@limiter.limit("10/minute")
+async def register_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    password2: str = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
 ):
-    # Валидация: проверка, что все поля заполнены
-    # Если хотя бы одно поле пустое - ошибка 400
-    if not title or not content or not author:
-        raise HTTPException(status_code=400, detail="Все поля обязательны")
+    validate_csrf(request, csrf_token)
+    if password != password2:
+        return templates.TemplateResponse(
+            request,
+            "register.html",
+            {"error": "Пароли не совпадают"},
+            status_code=400,
+        )
+    try:
+        data = RegisterUser(username=username, password=password)
+    except ValidationError as e:
+        msg = e.errors()[0].get("msg", "Ошибка валидации")
+        if isinstance(msg, dict):
+            msg = str(msg)
+        return templates.TemplateResponse(
+            request, "register.html", {"error": str(msg)}, status_code=400
+        )
+    if crud.get_user_by_username(db, data.username):
+        return templates.TemplateResponse(
+            request,
+            "register.html",
+            {"error": "Имя пользователя уже занято"},
+            status_code=400,
+        )
+    crud.create_user(db, data.username, hash_password(data.password))
+    request.session["username"] = data.username
+    ensure_session_csrf(request)
+    return RedirectResponse("/", status_code=303)
 
-    # Создание нового поста через CRUD
-    new_post = crud.create_post(db, title=title, content=content, author=author)
 
-    # Перенаправление на страницу созданного поста
-    # Рендерим шаблон post.html с данными нового поста
+@app.get("/login", response_class=HTMLResponse)
+async def login_form(
+    request: Request, next_url: str | None = Query(None, alias="next")
+):
     return templates.TemplateResponse(
-        "post.html", {"request": request, "post": new_post, "comments": []}
+        request, "login.html", {"next": next_url or ""}
     )
 
 
-# Маршрут добавления комментария к посту
-# post_id передается в URL, данные формы - author и content
-@app.post("/posts/{post_id}/comment", response_class=HTMLResponse)
-async def add_comment(
-    request: Request,  # Объект запроса
-    post_id: int,  # ID поста из URL
-    author: str = Form(...),  # Автор комментария из формы
-    content: str = Form(...),  # Содержимое комментария из формы
-    db: Session = Depends(get_db),  # Сессия БД
+@app.post("/login")
+@limiter.limit("20/minute")
+async def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    csrf_token: str = Form(...),
+    next: str = Form(""),
+    db: Session = Depends(get_db),
 ):
-    # Проверка существования поста
-    post = crud.get_post(db, post_id)
-    if not post:
-        # Если пост не найден - ошибка 404
-        raise HTTPException(status_code=404, detail="Пост не найден")
+    validate_csrf(request, csrf_token)
+    try:
+        creds = LoginUser(username=username, password=password)
+    except ValidationError:
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "Неверные данные", "next": next},
+            status_code=400,
+        )
+    user = crud.get_user_by_username(db, creds.username.strip())
+    if not user or not verify_password(creds.password, user.password_hash):
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "Неверное имя или пароль", "next": next},
+            status_code=400,
+        )
+    request.session["username"] = user.username
+    ensure_session_csrf(request)
+    dest = next if next.startswith("/") and not next.startswith("//") else "/"
+    return RedirectResponse(dest, status_code=303)
 
-    # Добавление комментария в базу данных через CRUD
-    crud.add_comment(db, post_id=post_id, author=author, content=content)
 
-    # Получение обновленного списка комментариев для поста
-    comments = crud.get_comments_by_post(db, post_id)
+@app.post("/logout")
+async def logout(
+    request: Request,
+    csrf_token: str = Form(...),
+):
+    validate_csrf(request, csrf_token)
+    request.session.clear()
+    return RedirectResponse("/", status_code=303)
 
-    # Рендеринг страницы поста с обновленным списком комментариев
-    return templates.TemplateResponse(
-        "post.html", {"request": request, "post": post, "comments": comments}
-    )
 
-
-# Маршрут для отображения случайной цитаты
-# Использует внешнее API (quotable.io) для получения цитаты
 @app.get("/random_quote", response_class=HTMLResponse)
 async def random_quote(request: Request):
     try:
-        # Создание асинхронного HTTP-клиента
-        # async with - автоматическое закрытие соединения после использования
         async with httpx.AsyncClient() as client:
-            # Выполнение GET-запроса к внешнему API цитат
-            # timeout=5.0 - таймаут 5 секунд
             resp = await client.get("https://api.quotable.io/random", timeout=5.0)
-
-            # Проверка успешности ответа (код 200)
             resp.raise_for_status()
-
-            # Парсинг JSON-ответа
             data = resp.json()
-
-            # Извлечение текста цитаты и автора
-            # .get() - безопасное получение значения (вернет значение по умолчанию если ключа нет)
             quote_text = data.get("content", "Цитата недоступна")
             quote_author = data.get("author", "Неизвестный")
-
     except httpx.RequestError:
-        # Обработка ошибок сети/запроса
-        # Если внешний API недоступен - используем значения по умолчанию
         quote_text = "Цитата недоступна"
         quote_author = "Администрация"
-
-    # Рендеринг шаблона quote.html с данными цитаты
     return templates.TemplateResponse(
-        "quote.html", {"request": request, "quote": quote_text, "author": quote_author}
+        request, "quote.html", {"quote": quote_text, "author": quote_author}
     )
 
 
-# Точка входа в приложение
-# Запускается только если файл запущен напрямую (а не импортирован)
 if __name__ == "__main__":
-    # Импорт uvicorn внутри блока, чтобы избежать ошибок при импорте
     import uvicorn
 
-    # Запуск сервера uvicorn
-    # "main:app" - ссылка на приложение (файл main.py, объект app)
-    # host="127.0.0.1" - адрес хоста (localhost)
-    # port=8000 - порт сервера
-    # reload=True - автоматическая перезагрузка при изменении кода (режим разработки)
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

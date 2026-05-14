@@ -1,9 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# URL для подключения к базе данных SQLite.
-# В данном случае, база данных будет храниться в файле social_media.db
-SQLALCHEMY_DATABASE_URL = "sqlite:///./social_media.db"
+from settings import settings
+
+# URL БД из окружения (по умолчанию SQLite в файле social_media.db)
+SQLALCHEMY_DATABASE_URL = settings.database_url
 
 # Создаем движок SQLAlchemy.
 # connect_args={"check_same_thread": False} необходим для SQLite при работе с FastAPI

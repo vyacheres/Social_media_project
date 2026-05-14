@@ -499,3 +499,52 @@ footer a:hover {
         flex-direction: column;
     }
 }
+
+/* Формы входа / регистрации / нового поста */
+.auth-form {
+    max-width: 32rem;
+}
+
+.auth-form div {
+    margin-bottom: 1rem;
+}
+
+.auth-form label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.auth-form input[type="text"],
+.auth-form input[type="password"],
+.auth-form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.error {
+    color: #c0392b;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.nav-user {
+    margin: 0 0.75rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.nav-logout {
+    display: inline;
+    margin-left: 0.5rem;
+}
+
+.nav-logout button {
+    padding: 4px 10px;
+    cursor: pointer;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    background: #ecf0f1;
+}
